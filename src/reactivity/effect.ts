@@ -7,7 +7,7 @@ class ReactiveEffect {
     
     run() {
         activeEffect = this
-        this._fn()
+        return this._fn()
     }
 }
 
@@ -42,5 +42,8 @@ let activeEffect: any // 副作用函数实例类
 export function effect(fn: any) {
     // fn
     const _effect = new ReactiveEffect(fn)
+
     _effect.run()
+
+    return _effect.run.bind(_effect)
 }
