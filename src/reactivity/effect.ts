@@ -1,7 +1,7 @@
 class ReactiveEffect {
     private _fn: any
 
-    constructor(fn: any) {
+    constructor(fn: any, public scheduler?: any) {
         this._fn = fn
     }
     
@@ -34,14 +34,19 @@ export function trigger(target: any, key: string | symbol) {
     let dep = depsMap.get(key)
 
     for(const effect of dep) {
-        effect.run()
+        if (effect.scheduler) {
+            effect.scheduler()
+        } else {
+            effect.run()
+        }
     }
 }
 
 let activeEffect: any // 副作用函数实例类
-export function effect(fn: any) {
+export function effect(fn: any, options: any = {}) {
     // fn
-    const _effect = new ReactiveEffect(fn)
+    const scheduler = options.scheduler
+    const _effect = new ReactiveEffect(fn, scheduler)
 
     _effect.run()
 
