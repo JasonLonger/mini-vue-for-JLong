@@ -1,6 +1,10 @@
+import { extend } from "../shared"
+
 class ReactiveEffect {
     private _fn: any
-    deps = []; // 所有依赖项
+    deps = [] // 所有依赖项
+    active = true
+    onStop?: () => void
     public scheduler: Function | undefined
     constructor(fn: any, scheduler?: Function) {
         this._fn = fn
@@ -11,7 +15,13 @@ class ReactiveEffect {
         return this._fn()
     }
     stop () {
-        cleanupEffect(this)
+        if (this.active) {
+            cleanupEffect(this)
+            if (this.onStop) {
+                this.onStop()
+            }
+            this.active = false
+        }
     }
 }
 
@@ -35,9 +45,9 @@ export function track(target: any, key: any) {
         dep = new Set()
         depsMap.set(key, dep)
     }
-
+    if (!activeEffect) return
     dep.add(activeEffect)
-    if (activeEffect) activeEffect.deps.push(dep) // 反向收集，用于stop
+    activeEffect.deps.push(dep) // 反向收集，用于stop
 }
 
 export function trigger(target: any, key: string | symbol) {
@@ -56,8 +66,9 @@ export function trigger(target: any, key: string | symbol) {
 let activeEffect: any // 副作用函数实例类
 export function effect(fn: any, options: any = {}) {
     // fn
-    const scheduler = options.scheduler
-    const _effect = new ReactiveEffect(fn, scheduler)
+    const _effect = new ReactiveEffect(fn, options.scheduler)
+    // extend
+    extend(_effect, options)
 
     _effect.run()
 
