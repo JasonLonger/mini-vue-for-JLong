@@ -1,14 +1,24 @@
 class ReactiveEffect {
     private _fn: any
-
-    constructor(fn: any, public scheduler?: any) {
+    deps = []; // 所有依赖项
+    public scheduler: Function | undefined
+    constructor(fn: any, scheduler?: Function) {
         this._fn = fn
+        this.scheduler = scheduler
     }
-    
-    run() {
+    run () {
         activeEffect = this
         return this._fn()
     }
+    stop () {
+        cleanupEffect(this)
+    }
+}
+
+function cleanupEffect(effect: any) {
+    effect.deps.forEach((dep: any) => {
+        dep.delete(effect)
+    })
 }
 
 const targetMap = new Map()
@@ -27,6 +37,7 @@ export function track(target: any, key: any) {
     }
 
     dep.add(activeEffect)
+    if (activeEffect) activeEffect.deps.push(dep) // 反向收集，用于stop
 }
 
 export function trigger(target: any, key: string | symbol) {
@@ -50,5 +61,11 @@ export function effect(fn: any, options: any = {}) {
 
     _effect.run()
 
-    return _effect.run.bind(_effect)
+    const runner: any =  _effect.run.bind(_effect)
+    runner.effect = _effect
+    return runner
+}
+
+export function stop (runner: any) {
+    runner.effect.stop()
 }
